@@ -1,0 +1,27 @@
+{
+  "name": "@notevenaneko/trpc-restful",
+  "version": "0.1.0",
+  "description": "",
+  "type": "module",
+  "packageManager": "pnpm@9.1.1",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@trpc/server": "11.0.0-rc.370",
+    "@types/node": "^18",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "@trpc/server": "11.0.0-rc.370"
+  },
+  "dependencies": {
+    "find-my-way": "^8.2.0"
+  }
+}
