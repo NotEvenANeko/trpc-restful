@@ -1,9 +1,9 @@
 import { initTRPC } from "@trpc/server";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { RESTfulMeta } from "../src/types";
-import { restfulHandlerBuilder } from "../src/restfulHandler";
-import { createResponse } from "../src/responseFactory";
+import type { RESTfulMeta } from "../src/core/types";
+import { restfulHandlerBuilder } from "../src/core/restfulHandler";
+import { ResponseFactory } from "../src/core/responseFactory";
 
 describe("restfulHandler", () => {
   it("test", async () => {
@@ -22,21 +22,21 @@ describe("restfulHandler", () => {
         .meta({ method: "POST", path: "/hello" })
         .input(z.object({ content: z.string() }))
         .mutation(({ input }) => {
-          return createResponse(201).json({ hello: input.content });
+          return ResponseFactory.status(201).json({ hello: input.content });
         }),
 
       add: trpc.procedure
         .meta({ method: "GET", path: "/add" })
         .input(z.object({ a: z.coerce.number(), b: z.coerce.number() }))
         .query(({ input }) =>
-          createResponse(200).json({ result: input.a + input.b })
+          ResponseFactory.status(200).json({ result: input.a + input.b })
         ),
 
       redirect: trpc.procedure
         .meta({ method: "GET", path: "/redirect/:id" })
         .input(z.object({ id: z.string() }))
         .query(({ input }) => {
-          return createResponse(200).redirectTo(
+          return ResponseFactory.status(200).redirectTo(
             `https://github.com/${input.id}`,
             302
           );

@@ -1,15 +1,39 @@
 import type { AnyTRPCProcedure, AnyTRPCRouter } from "@trpc/server";
 import type {
+  BaseHandlerOptions,
   CreateRouterOptions,
   ValueOf,
+  inferRouterContext,
 } from "@trpc/server/unstable-core-do-not-import";
 import FindMyWay, { type FindResult } from "find-my-way";
 
 import { assertRESTfulMeta } from "./utils";
 import { resolveResponse } from "./resolveResponse";
 
-export interface RESTfulHandlerOptions<TRouter extends AnyTRPCRouter> {
+type RESTfulCreateContextOptions = {
+  req: Request;
+};
+
+type RESTfulCreateContextFn<TRouter extends AnyTRPCRouter> = (
+  opts: RESTfulCreateContextOptions
+  // FIXME:
+) => Promise<inferRouterContext<TRouter>> | inferRouterContext<TRouter>;
+
+export type ContentTypeParser = {
+  isMatch: (req: Request) => boolean;
+
+  parse: (req: Request) => Promise<unknown> | unknown;
+};
+
+export interface RESTfulHandlerOptions<TRouter extends AnyTRPCRouter>
+  extends Omit<
+    BaseHandlerOptions<TRouter, Request>,
+    "batching" | "allowMethodOverride" | "allowBatching"
+  > {
   router: TRouter;
+  createContext?: RESTfulCreateContextFn<TRouter>;
+
+  contentTypeParser?: ContentTypeParser[];
 }
 
 export type ProcedureFindResult = Omit<FindResult<any>, "handler"> & {
@@ -25,28 +49,33 @@ const isProcedure = (v: ValueOf<CreateRouterOptions>): v is AnyTRPCProcedure =>
   typeof v === "function";
 
 const flattenProcedures = (
-  input: CreateRouterOptions
+  input: CreateRouterOptions,
+  path: string[] = []
 ): { [path: string]: AnyTRPCProcedure } =>
-  Object.entries(input).reduce((acc, [, cur]) => {
+  Object.entries(input).reduce((acc, [path_, cur]) => {
     if (isRouter(cur)) {
       return {
         ...acc,
-        ...flattenProcedures(cur._def.record),
+        ...flattenProcedures(cur._def.record, [...path, path_]),
       };
     }
 
     if (!isProcedure(cur)) {
       return {
         ...acc,
-        ...flattenProcedures(cur),
+        ...flattenProcedures(cur, [...path, path_]),
       };
     }
 
     assertRESTfulMeta(cur._def.meta);
 
+    const finalPath = cur._def.meta.path?.startsWith("/")
+      ? cur._def.meta.path
+      : `/${[...path, path_, cur._def.meta.path].filter(Boolean).join("/")}`;
+
     return {
       ...acc,
-      [cur._def.meta.path]: cur,
+      [finalPath]: cur,
     };
   }, {});
 
@@ -93,10 +122,13 @@ export const restfulHandlerBuilder = <TRouter extends AnyTRPCRouter>(
     }
 
     return resolveResponse({
-      req,
+      ...opts,
+      req: {
+        req,
+        params: handler.params,
+        query: Object.fromEntries(url.searchParams.entries()),
+      },
       handler: handler.handler,
-      params: handler.params,
-      query: Object.fromEntries(url.searchParams.entries()),
       type,
       path: url.pathname,
     });
