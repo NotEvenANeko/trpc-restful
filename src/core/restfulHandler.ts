@@ -34,6 +34,7 @@ export interface RESTfulHandlerOptions<TRouter extends AnyTRPCRouter>
   createContext?: RESTfulCreateContextFn<TRouter>;
 
   contentTypeParser?: ContentTypeParser[];
+  prefix?: string;
 }
 
 export type ProcedureFindResult = Omit<FindResult<any>, "handler"> & {
@@ -112,9 +113,14 @@ export const restfulHandlerBuilder = <TRouter extends AnyTRPCRouter>(
 
     const type = method === "GET" ? "query" : "mutation";
 
+    const pathname =
+      opts.prefix && url.pathname.startsWith(opts.prefix)
+        ? url.pathname.slice(opts.prefix.length)
+        : url.pathname;
+
     const handler = router.find(
       method as FindMyWay.HTTPMethod,
-      url.pathname
+      pathname
     ) as any as ProcedureFindResult | null;
 
     if (!handler) {

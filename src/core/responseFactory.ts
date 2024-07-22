@@ -103,7 +103,7 @@ export class ResponseFactory<
     return this.header("Location", location).status(code ?? (307 as Status));
   }
 
-  toResponse() {
+  toResponse(): Response {
     return new Response(this.opts.body, {
       status: this.opts.status,
       headers: Object.fromEntries(
