@@ -1,6 +1,6 @@
 import type { ContentTypeParser } from "./restfulHandler";
 
-const jsonContentTypeParser: ContentTypeParser = {
+export const jsonContentTypeParser: ContentTypeParser = {
   isMatch: (req) =>
     !!req.headers.get("content-type")?.startsWith("application/json"),
 
@@ -11,7 +11,7 @@ const jsonContentTypeParser: ContentTypeParser = {
   },
 };
 
-const textPlainContentTypeParser: ContentTypeParser = {
+export const textPlainContentTypeParser: ContentTypeParser = {
   isMatch: (req) => !!req.headers.get("content-type")?.startsWith("text/plain"),
 
   parse: async (req) => req.text(),

@@ -1,4 +1,9 @@
-import type { AnyTRPCProcedure, AnyTRPCRouter } from "@trpc/server";
+import {
+  TRPCError,
+  type AnyTRPCProcedure,
+  type AnyTRPCRouter,
+} from "@trpc/server";
+import { getHTTPStatusCodeFromError } from "@trpc/server/http";
 import type {
   BaseHandlerOptions,
   CreateRouterOptions,
@@ -70,9 +75,9 @@ const flattenProcedures = (
 
     assertRESTfulMeta(cur._def.meta);
 
-    const finalPath = cur._def.meta.path?.startsWith("/")
+    const finalPath = cur._def.meta?.path?.startsWith("/")
       ? cur._def.meta.path
-      : `/${[...path, path_, cur._def.meta.path].filter(Boolean).join("/")}`;
+      : `/${[...path, path_, cur._def.meta?.path].filter(Boolean).join("/")}`;
 
     return {
       ...acc,
@@ -96,7 +101,7 @@ export const restfulHandlerBuilder = <TRouter extends AnyTRPCRouter>(
       assertRESTfulMeta(handler._def.meta);
 
       const method =
-        handler._def.meta.method ??
+        handler._def.meta?.method ??
         (handler._def.type === "query"
           ? "GET"
           : handler._def.type === "mutation"
@@ -118,24 +123,24 @@ export const restfulHandlerBuilder = <TRouter extends AnyTRPCRouter>(
         ? url.pathname.slice(opts.prefix.length)
         : url.pathname;
 
-    const handler = router.find(
-      method as FindMyWay.HTTPMethod,
-      pathname
-    ) as any as ProcedureFindResult | null;
-
-    if (!handler) {
-      return new Response("Endpoint not found", { status: 404 });
-    }
+    const getHandler = () =>
+      (router.find(
+        method as FindMyWay.HTTPMethod,
+        pathname
+      ) as any as ProcedureFindResult | null) ?? undefined;
 
     return resolveResponse({
       ...opts,
-      req: {
-        req,
-        params: handler.params,
-        query: Object.fromEntries(url.searchParams.entries()),
+      req,
+      getHandler,
+      onError: (o) => {
+        opts.onError?.({
+          ...o,
+          req,
+        });
       },
-      handler: handler.handler,
       type,
+      url,
       path: url.pathname,
     });
   };

@@ -1,4 +1,4 @@
-import { initTRPC } from "@trpc/server";
+import { TRPCError, initTRPC } from "@trpc/server";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import type { RESTfulMeta } from "../src/core/types";
@@ -86,5 +86,27 @@ describe("restfulHandler", () => {
     expect(response5.status).toBe(404);
 
     expect.assertions(9);
+  });
+
+  it("error", async () => {
+    const trpc = initTRPC.meta<RESTfulMeta<{}>>().create();
+
+    const router = trpc.router({
+      error: trpc.procedure.query(() => {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "bad",
+        });
+      }),
+    });
+
+    const restfulHandler = restfulHandlerBuilder({ router });
+
+    const response = await restfulHandler(
+      new Request("https://example.com/error")
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("bad");
   });
 });
